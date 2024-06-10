@@ -11,7 +11,7 @@ app.use(cors({
         'http://localhost:5173'
     ],
 }))
-app.use(express())
+app.use(express.json())
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -31,9 +31,53 @@ async function run() {
     try {
 
 
+        const userCollection = client.db("realEstateDB").collection("users");
         const propertyCollection = client.db("realEstateDB").collection("properties");
         const reviewsCollection = client.db("realEstateDB").collection("reviews");
+        const wishlistCollection = client.db("realEstateDB").collection("wishlist");
 
+
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const query = {email: user.email}
+            const existingUser = await userCollection.findOne(query)
+            if (existingUser) {
+                return res.send({message:'user already exists', insertedId:null})
+            }
+            const result = await userCollection.insertOne(user)
+            res.send(result)
+        })
+
+
+        app.get('/users', async (req, res) => {
+            const result = await userCollection.find().toArray()
+            res.send(result)
+        })
+
+        app.post('/wishlist', async (req, res) => {
+            const cursor = req.body;
+            const result = await wishlistCollection.insertOne(cursor)
+            res.send(result)
+        })
+
+        app.get('/wishlist', async (req, res) => {
+            const email = req.query.email
+            const query = { email: email }
+            const result = await wishlistCollection.find(query).toArray()
+            res.send(result)
+        })
+        app.delete('/wishlist/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await wishlistCollection.deleteOne(query)
+            res.send(result)
+        })
+
+        app.post('/property', async(req, res)=>{
+           const newProperty = req.body;
+           const result = await propertyCollection.insertOne(newProperty)
+           res.send(result)
+        })
 
         app.get('/property', async (req, res) => {
             const result = await propertyCollection.find().toArray()
@@ -46,9 +90,29 @@ async function run() {
             res.send(result)
         })
 
+        app.post('/reviews', async (req, res) => {
+            const cursor = req.body;
+            const result = await reviewsCollection.insertOne(cursor)
+            res.send(result)
+        })
+
+        app.delete('/reviews/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await reviewsCollection.deleteOne(query)
+            res.send(result)
+        })
+
 
         app.get('/reviews', async (req, res) => {
             const result = await reviewsCollection.find().toArray()
+            res.send(result)
+        })
+
+        app.get('/reviews/my-reviews', async (req, res) => {
+            const email = req.query.email
+            const query = { userEmail: email }
+            const result = await reviewsCollection.find(query).toArray()
             res.send(result)
         })
         app.get('/reviews/:id', async (req, res) => {
