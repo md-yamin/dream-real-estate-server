@@ -47,10 +47,51 @@ async function run() {
             const result = await userCollection.insertOne(user)
             res.send(result)
         })
-
+        app.patch('/users/agent/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set:{
+                    role: 'agent'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
+        app.patch('/users/admin/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set:{
+                    role: 'admin'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
+        app.patch('/users/fraud/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set:{
+                    role: 'fraud'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
 
         app.get('/users', async (req, res) => {
             const result = await userCollection.find().toArray()
+            res.send(result)
+        })
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await userCollection.deleteOne(query)
             res.send(result)
         })
 
@@ -94,6 +135,13 @@ async function run() {
         app.get('/property/my-property', async (req, res) => {
             const email = req.query.email
             const query = { email: email }
+            const result = await propertyCollection.find(query).toArray()
+            res.send(result)
+        })
+
+        app.get('/property/verified', async (req, res) => {
+            const verified = req.query.verification_status
+            const query = { verification_status: verified }
             const result = await propertyCollection.find(query).toArray()
             res.send(result)
         })
