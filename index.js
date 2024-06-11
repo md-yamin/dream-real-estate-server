@@ -78,11 +78,26 @@ async function run() {
            const result = await propertyCollection.insertOne(newProperty)
            res.send(result)
         })
+        
+        app.delete('/property/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await propertyCollection.deleteOne(query)
+            res.send(result)
+        })
 
         app.get('/property', async (req, res) => {
             const result = await propertyCollection.find().toArray()
             res.send(result)
         })
+
+        app.get('/property/my-property', async (req, res) => {
+            const email = req.query.email
+            const query = { email: email }
+            const result = await propertyCollection.find(query).toArray()
+            res.send(result)
+        })
+
         app.get('/property/details/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
