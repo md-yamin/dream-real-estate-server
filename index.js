@@ -3,6 +3,7 @@ const app = express()
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_secret_key);
 const port = process.env.PORT || 5000;
 
 //middleware
@@ -36,16 +37,118 @@ async function run() {
         const propertyCollection = client.db("realEstateDB").collection("properties");
         const reviewsCollection = client.db("realEstateDB").collection("reviews");
         const wishlistCollection = client.db("realEstateDB").collection("wishlist");
+        const offersCollection = client.db("realEstateDB").collection("offers");
+
+
+
+
+
+        const verifyToken = (req, res, next) => {
+            if(!req.headers.authorization){
+                return res.status(401).send({message:'unauthorized access'})
+            }
+            const token = req.headers.authorization.split(' ')[1];
+            jwt.verify(token,  process.env.TOKEN_Secret, (err, decoded)=>{
+                if (err) {
+                    return res.status(403).send({message:'forbidden access'})
+                }
+                req.decoded = decoded
+                next()
+              });
+
+        }
+
+
+        app.post('/offers', async (req, res) => {
+            const cursor = req.body;
+            const result = await offersCollection.insertOne(cursor)
+            res.send(result)
+        })
+        app.get('/offers', async (req, res) => {
+            const result = await offersCollection.find().toArray()
+            res.send(result)
+        })
+
+        app.patch('/offers/status/:id', async (req, res) => {
+            const id = req.params.id;
+            const {status} = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    status:status,
+                }
+            }
+            const result = await offersCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
+
+        app.get('/offers', async (req, res) => {
+            const email = req.query.email
+            const query = { email: email }
+            const result = await offersCollection.find(query).toArray()
+            res.send(result)
+        })
+        app.get('/offers/prices/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { email: email }
+            const result = await offersCollection.find(query).toArray()
+            res.send(result)
+        })
+        app.get('/offers/selling/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { buyer_email: email }
+            const result = await offersCollection.find(query).toArray()
+            res.send(result)
+        })
+
 
 
         app.post('/jwt', async (req, res) => {
             const user = req.body;
-            const token = jwt.sign(user, process.env.Token_Secret, {
+            const token = jwt.sign(user, process.env.TOKEN_Secret, {
                 expiresIn: '3h'
             })
             res.send({ token })
         })
+        app.get('/users',verifyToken, async (req, res) => {
+            const result = await userCollection.find().toArray()
+            res.send(result)
+        })
+        app.get('/users/profile/:email',verifyToken, async (req, res) => {
+            const email = req.params.email
+            const query = { email: email }
+            const result = await userCollection.findOne(query)
+            res.send(result)
+        })
+        app.get('/users/admin/:email',verifyToken, async (req, res) => {
+            const email = req.params.email
+            if (email !== req.decoded.email) {
+                return res.status(403).send({message:'unauthorized access'})
+            }
+            const query = { email: email }
+            const result = await userCollection.findOne(query)
+            let admin = false
+            if(result){
+                admin = result?.role === 'admin'
+            }
+            res.send({admin})
+        })
 
+        app.get('/users/agent/:email',verifyToken, async (req, res) => {
+            const email = req.params.email
+            if (email !== req.decoded.email) {
+                return res.status(403).send({message:'unauthorized access'})
+            }
+            const query = { email: email }
+            const result = await userCollection.findOne(query)
+            let agent = false
+            if(result){
+                agent = result?.role === 'agent'
+            }
+            res.send({agent})
+        })
+        
         app.post('/users', async (req, res) => {
             const user = req.body;
             const query = { email: user.email }
@@ -93,10 +196,9 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/users', async (req, res) => {
-            const result = await userCollection.find().toArray()
-            res.send(result)
-        })
+
+
+
         app.delete('/users/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
@@ -162,12 +264,24 @@ async function run() {
         app.patch('/property/status/:id', async (req, res) => {
             const id = req.params.id;
             const {verification_status} = req.body;
-            console.log(verification_status);
             const filter = { _id: new ObjectId(id) };
             const options = { upsert: true }
             const updatedDoc = {
                 $set: {
                     verification_status:verification_status,
+                }
+            }
+            const result = await propertyCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
+        app.patch('/property/offer/:id', async (req, res) => {
+            const id = req.params.id;
+            const {offer} = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    offer:offer,
                 }
             }
             const result = await propertyCollection.updateOne(filter, updatedDoc, options);
@@ -207,8 +321,10 @@ async function run() {
         })
         app.get('/property/update/:id', async (req, res) => {
             const id = req.params.id;
+            console.log(id);
             const query = { _id: new ObjectId(id) }
             const result = await propertyCollection.findOne(query);
+            console.log(result);
             res.send(result)
         })
 
@@ -243,6 +359,27 @@ async function run() {
             const result = await reviewsCollection.find(query).toArray();
             res.send(result)
         })
+
+
+        app.post('/create-payment-intent', async(req, res)=>{
+            const {price} = req.body
+            if (!price) {
+                return
+            }
+            const amount = parseInt(price * 100)
+            console.log(amount, 'amount inside intent');
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types:['card']
+            });
+            res.send(
+                {
+                    clientSecret: paymentIntent.client_secret
+                }
+            )
+        })
+
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
