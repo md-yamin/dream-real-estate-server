@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express()
+const jwt = require('jsonwebtoken');
 const cors = require('cors');
 require('dotenv').config()
 const port = process.env.PORT || 5000;
@@ -37,46 +38,54 @@ async function run() {
         const wishlistCollection = client.db("realEstateDB").collection("wishlist");
 
 
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.Token_Secret, {
+                expiresIn: '3h'
+            })
+            res.send({ token })
+        })
+
         app.post('/users', async (req, res) => {
             const user = req.body;
-            const query = {email: user.email}
+            const query = { email: user.email }
             const existingUser = await userCollection.findOne(query)
             if (existingUser) {
-                return res.send({message:'user already exists', insertedId:null})
+                return res.send({ message: 'user already exists', insertedId: null })
             }
             const result = await userCollection.insertOne(user)
             res.send(result)
         })
-        app.patch('/users/agent/:id', async(req, res)=>{
+        app.patch('/users/agent/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const options = { upsert: true }
             const updatedDoc = {
-                $set:{
+                $set: {
                     role: 'agent'
                 }
             }
             const result = await userCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
         })
-        app.patch('/users/admin/:id', async(req, res)=>{
+        app.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const options = { upsert: true }
             const updatedDoc = {
-                $set:{
+                $set: {
                     role: 'admin'
                 }
             }
             const result = await userCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
         })
-        app.patch('/users/fraud/:id', async(req, res)=>{
+        app.patch('/users/fraud/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const options = { upsert: true }
             const updatedDoc = {
-                $set:{
+                $set: {
                     role: 'fraud'
                 }
             }
@@ -114,16 +123,60 @@ async function run() {
             res.send(result)
         })
 
-        app.post('/property', async(req, res)=>{
-           const newProperty = req.body;
-           const result = await propertyCollection.insertOne(newProperty)
-           res.send(result)
+        app.post('/property', async (req, res) => {
+            const newProperty = req.body;
+            const result = await propertyCollection.insertOne(newProperty)
+            res.send(result)
         })
-        
+
         app.delete('/property/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await propertyCollection.deleteOne(query)
+            res.send(result)
+        })
+
+        app.patch('/property/:id', async (req, res) => {
+            const id = req.params.id;
+            const updatedProperty = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    property_image: updatedProperty.property_image,
+                    property_title: updatedProperty.property_title,
+                    property_location: updatedProperty.property_location,
+                    property_description: updatedProperty.property_description,
+                    min_price_range: updatedProperty.min_price_range,
+                    max_price_range: updatedProperty.max_price_range,
+                    agent_name: updatedProperty.agent_name,
+                    agent_image: updatedProperty.agent_image,
+                    email:updatedProperty.email,
+                    nation:updatedProperty.nation,
+                    verification_status:updatedProperty.verification_status,
+                }
+            }
+            const result = await propertyCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
+        app.patch('/property/status/:id', async (req, res) => {
+            const id = req.params.id;
+            const {verification_status} = req.body;
+            console.log(verification_status);
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    verification_status:verification_status,
+                }
+            }
+            const result = await propertyCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
+        app.delete('/property/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { email: email }
+            const result = await propertyCollection.deleteMany(query)
             res.send(result)
         })
 
@@ -147,6 +200,12 @@ async function run() {
         })
 
         app.get('/property/details/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await propertyCollection.findOne(query);
+            res.send(result)
+        })
+        app.get('/property/update/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await propertyCollection.findOne(query);
