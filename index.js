@@ -10,7 +10,7 @@ const port = process.env.PORT || 5000;
 
 app.use(cors({
     origin: [
-        'http://localhost:5173'
+        'https://dream-real-estate-efecd.web.app'
     ],
 }))
 app.use(express.json())
@@ -119,7 +119,7 @@ async function run() {
             })
             res.send({ token })
         })
-        app.get('/users', verifyToken, async (req, res) => {
+        app.get('/users',verifyToken, async (req, res) => {
             const result = await userCollection.find().toArray()
             res.send(result)
         })
@@ -300,7 +300,8 @@ async function run() {
             const email = req.params.email
             const query = { email: email }
             const result = await propertyCollection.deleteMany(query)
-            res.send(result)
+            const deleteOffers = await offersCollection.deleteMany(query)
+            res.send({result, deleteOffers})
         })
 
         app.get('/property', async (req, res) => {
@@ -318,7 +319,16 @@ async function run() {
         app.get('/property/verified', async (req, res) => {
             const verified = req.query.verification_status
             const query = { verification_status: verified }
-            const result = await propertyCollection.find(query).toArray()
+            const properties = await propertyCollection.find(query).toArray()
+            const result = properties.filter(property => property.status !== 'sold');
+            res.send(result)
+        })
+
+        app.get('/property/searched/:title', async (req, res) => {
+            const query = req.params.title
+            const properties = await propertyCollection.find( { $text: { $search: query } } ).toArray()
+            const verified = properties.filter(property => property.verification_status == 'verified');
+            const result = verified.filter(property => property?.status !== 'sold');
             res.send(result)
         })
 
@@ -394,8 +404,6 @@ async function run() {
             const paymentResult = await paymentCollection.insertOne(payment)
             console.log('payment info', payment);
             const query = { _id: payment.offerId }
-            // console.log('query info',query);
-            // const deleteResult = await offersCollection.deleteOne(query)
             res.send(paymentResult)
         })
 
@@ -415,10 +423,9 @@ async function run() {
             res.send({resultProperty,updateResult});
         })
 
-        await client.connect();
-
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.connect();
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
     }
 }
