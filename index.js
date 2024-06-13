@@ -38,23 +38,24 @@ async function run() {
         const reviewsCollection = client.db("realEstateDB").collection("reviews");
         const wishlistCollection = client.db("realEstateDB").collection("wishlist");
         const offersCollection = client.db("realEstateDB").collection("offers");
+        const paymentCollection = client.db("realEstateDB").collection("payments");
 
 
 
 
 
         const verifyToken = (req, res, next) => {
-            if(!req.headers.authorization){
-                return res.status(401).send({message:'unauthorized access'})
+            if (!req.headers.authorization) {
+                return res.status(401).send({ message: 'unauthorized access' })
             }
             const token = req.headers.authorization.split(' ')[1];
-            jwt.verify(token,  process.env.TOKEN_Secret, (err, decoded)=>{
+            jwt.verify(token, process.env.TOKEN_Secret, (err, decoded) => {
                 if (err) {
-                    return res.status(403).send({message:'forbidden access'})
+                    return res.status(403).send({ message: 'forbidden access' })
                 }
                 req.decoded = decoded
                 next()
-              });
+            });
 
         }
 
@@ -71,15 +72,22 @@ async function run() {
 
         app.patch('/offers/status/:id', async (req, res) => {
             const id = req.params.id;
-            const {status} = req.body;
+            const { status } = req.body;
             const filter = { _id: new ObjectId(id) };
-            const options = { upsert: true }
+            if (status === 'accepted') {
+                const acceptedOffer = await offersCollection.findOne(filter)
+                const offerPropertyId = acceptedOffer.property_id
+                const rejectionFilter = { property_id: offerPropertyId, _id: { $ne: id }, status: 'pending' }
+                const updateResult = await offersCollection.updateMany(rejectionFilter, { $set: { status: 'rejected' } })
+                console.log('This is you object', rejectionFilter);
+                console.log(updateResult);
+            }
             const updatedDoc = {
                 $set: {
-                    status:status,
+                    status: status,
                 }
             }
-            const result = await offersCollection.updateOne(filter, updatedDoc, options);
+            const result = await offersCollection.updateOne(filter, updatedDoc);
             res.send(result);
         })
 
@@ -111,44 +119,44 @@ async function run() {
             })
             res.send({ token })
         })
-        app.get('/users',verifyToken, async (req, res) => {
+        app.get('/users', verifyToken, async (req, res) => {
             const result = await userCollection.find().toArray()
             res.send(result)
         })
-        app.get('/users/profile/:email',verifyToken, async (req, res) => {
+        app.get('/users/profile/:email', verifyToken, async (req, res) => {
             const email = req.params.email
             const query = { email: email }
             const result = await userCollection.findOne(query)
             res.send(result)
         })
-        app.get('/users/admin/:email',verifyToken, async (req, res) => {
+        app.get('/users/admin/:email', verifyToken, async (req, res) => {
             const email = req.params.email
             if (email !== req.decoded.email) {
-                return res.status(403).send({message:'unauthorized access'})
+                return res.status(403).send({ message: 'unauthorized access' })
             }
             const query = { email: email }
             const result = await userCollection.findOne(query)
             let admin = false
-            if(result){
+            if (result) {
                 admin = result?.role === 'admin'
             }
-            res.send({admin})
+            res.send({ admin })
         })
 
-        app.get('/users/agent/:email',verifyToken, async (req, res) => {
+        app.get('/users/agent/:email', verifyToken, async (req, res) => {
             const email = req.params.email
             if (email !== req.decoded.email) {
-                return res.status(403).send({message:'unauthorized access'})
+                return res.status(403).send({ message: 'unauthorized access' })
             }
             const query = { email: email }
             const result = await userCollection.findOne(query)
             let agent = false
-            if(result){
+            if (result) {
                 agent = result?.role === 'agent'
             }
-            res.send({agent})
+            res.send({ agent })
         })
-        
+
         app.post('/users', async (req, res) => {
             const user = req.body;
             const query = { email: user.email }
@@ -253,9 +261,9 @@ async function run() {
                     max_price_range: updatedProperty.max_price_range,
                     agent_name: updatedProperty.agent_name,
                     agent_image: updatedProperty.agent_image,
-                    email:updatedProperty.email,
-                    nation:updatedProperty.nation,
-                    verification_status:updatedProperty.verification_status,
+                    email: updatedProperty.email,
+                    nation: updatedProperty.nation,
+                    verification_status: updatedProperty.verification_status,
                 }
             }
             const result = await propertyCollection.updateOne(filter, updatedDoc, options);
@@ -263,12 +271,12 @@ async function run() {
         })
         app.patch('/property/status/:id', async (req, res) => {
             const id = req.params.id;
-            const {verification_status} = req.body;
+            const { verification_status } = req.body;
             const filter = { _id: new ObjectId(id) };
             const options = { upsert: true }
             const updatedDoc = {
                 $set: {
-                    verification_status:verification_status,
+                    verification_status: verification_status,
                 }
             }
             const result = await propertyCollection.updateOne(filter, updatedDoc, options);
@@ -276,17 +284,18 @@ async function run() {
         })
         app.patch('/property/offer/:id', async (req, res) => {
             const id = req.params.id;
-            const {offer} = req.body;
+            const { offer } = req.body;
             const filter = { _id: new ObjectId(id) };
             const options = { upsert: true }
             const updatedDoc = {
                 $set: {
-                    offer:offer,
+                    offer: offer,
                 }
             }
             const result = await propertyCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
         })
+
         app.delete('/property/:email', async (req, res) => {
             const email = req.params.email
             const query = { email: email }
@@ -321,10 +330,8 @@ async function run() {
         })
         app.get('/property/update/:id', async (req, res) => {
             const id = req.params.id;
-            console.log(id);
             const query = { _id: new ObjectId(id) }
             const result = await propertyCollection.findOne(query);
-            console.log(result);
             res.send(result)
         })
 
@@ -361,8 +368,8 @@ async function run() {
         })
 
 
-        app.post('/create-payment-intent', async(req, res)=>{
-            const {price} = req.body
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body
             if (!price) {
                 return
             }
@@ -371,7 +378,7 @@ async function run() {
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: amount,
                 currency: 'usd',
-                payment_method_types:['card']
+                payment_method_types: ['card']
             });
             res.send(
                 {
@@ -379,16 +386,40 @@ async function run() {
                 }
             )
         })
+        // _id:{
+        //     $in:[payment.offerId]
+        // }
+        app.post('/payments', async (req, res) => {
+            const payment = req.body;
+            const paymentResult = await paymentCollection.insertOne(payment)
+            console.log('payment info', payment);
+            const query = { _id: payment.offerId }
+            // console.log('query info',query);
+            // const deleteResult = await offersCollection.deleteOne(query)
+            res.send(paymentResult)
+        })
 
+        app.patch('/sold/:id', async (req, res) => {
+            const id = req.params.id;
+            const { status } = req.body;
+            const filterProperty = { _id: new ObjectId(id) };
+            const filterOffers = { property_id: id };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    status: 'sold',
+                }
+            }
+            const resultProperty = await propertyCollection.updateMany(filterProperty, updatedDoc, options);
+            const updateResult = await offersCollection.updateMany(filterOffers, updatedDoc, options)
+            res.send({resultProperty,updateResult});
+        })
 
-        // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
-        // Send a ping to confirm a successful connection
+
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
-        // Ensures that the client will close when you finish/error
-        // await client.close();
     }
 }
 run().catch(console.dir);
