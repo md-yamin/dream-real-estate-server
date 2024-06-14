@@ -9,7 +9,7 @@ const port = process.env.PORT || 5000;
 //middleware
 
 app.use(cors({
-    origin: ['https://dream-real-estate-efecd.web.app'],
+    origin: ['https://dream-real-estate-efecd.web.app','http://localhost:5173'],
     credentials: true
 }))
 app.use(express.json())
