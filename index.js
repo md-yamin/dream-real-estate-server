@@ -12,6 +12,8 @@ app.use(cors({
     origin: [
         'https://dream-real-estate-efecd.web.app'
     ],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'], 
 }))
 app.use(express.json())
 
