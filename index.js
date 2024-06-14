@@ -10,7 +10,7 @@ const port = process.env.PORT || 5000;
 
 app.use(cors({
     origin: [
-        'https://dream-real-estate-efecd.web.app'
+        "https://dream-real-estate-efecd.web.app"
     ],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'], 
