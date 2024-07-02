@@ -1,5 +1,14 @@
 Dream Real Estate
 
+Project Overview: This is a real-estate e-commerce website. This website different access levels of admin,agent,user. Each access level holder have a different dashboard. It also has a fraud validation feature where if a admin deems some one as fraud then they will be restricted of access.<br/>
+This website features:<br/>
+1. Access levels user, agent, admin.<br/>
+2. Each access level has a different dashboard. <br/>
+3. Payment system integration. <br/>
+4. Fraud validation. <br/>
+
+This is one of my favourate projects. I faced lots of issues regarding the dashboard layout for different access levels. One of them was regarding the responsiveness of the tables shown in the dashboard. Then I tried something new. I made the tables for small devices hidden for large devices and block for medium devices. I made a reusable layout for small and large devices and used them. It kind of took a round about approch but I learned something new. 
+
 Client Side Website Live Link: https://dream-real-estate-efecd.web.app
 <br/>
 Client Side Github Link: https://github.com/md-yamin/dream-real-estate-client.git
