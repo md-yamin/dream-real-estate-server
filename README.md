@@ -12,7 +12,7 @@ If you want to clone this website you would need to clone both the client and se
 
 1. Clone the Client-Side Repository:<br/>
  a. git clone https://github.com/md-yamin/dream-real-estate-client.git<br/>
- b. cd dream-real-estate-client<br/>
+ b. cd/ your project name<br/>
 
 2. Install Packages:
  a. npm install<br/>
@@ -22,11 +22,11 @@ If you want to clone this website you would need to clone both the client and se
   
 4. Update Request URLs:<br/>
   Replace all request URLs from https://dream-real-estate-server.vercel.app to the URL where your server is hosted. If running the server locally, use 
-  http://localhost:5173.
+  http://localhost:5000.
   
 5.Clone the Server-Side Repository:<br/>
   a. git clone https://github.com/md-yamin/dream-real-estate-server.git<br/>
-  b. cd dream-real-estate-server<br/>
+  b. cd/ your project name<br/>
 
 6.Configure CORS:<br/>
 Add the local URL of the client to the CORS origin if running locally. Alternatively, use * to allow access from any origin.
