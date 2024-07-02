@@ -33,9 +33,9 @@ Add the local URL of the client to the CORS origin if running locally. Alternati
 
 7. Set Up Environment Variables:<br/>
   a. Create a .env file with the following variables:<br/>
-  b. DB_USER=<your-mongodb-uri-username><br/>
-  c. DB_PASS=<your-mongodb-uri-password><br/>
-  d. TOKEN_SECRET=<your-64bit-hexadecimal-token>
+  b. DB_USER=your-mongodb-uri-username<br/>
+  c. DB_PASS=your-mongodb-uri-password<br/>
+  d. ACCESS_TOKEN_SECRET=your-64bit-hexadecimal-token(you need to generate this)
   
 8. Run the Server and Client:<br/>
 
